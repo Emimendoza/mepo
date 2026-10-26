@@ -117,10 +117,11 @@ src_configure() {
 		-DCMAKE_INSTALL_MANDIR="${BUILD_DIR}/install/share/man"
 		-DCMAKE_INSTALL_INFODIR="${BUILD_DIR}/install/share/info"
 		-DCMAKE_INSTALL_DOCDIR="${BUILD_DIR}/install/share/doc/${PF}"
-		-DSYCL_COMPILER_VERSION="${PV//./}"
 		-DLLVM_USE_SPLIT_DWARF=OFF
 		-DCLANG_DEFAULT_LINKER=lld
 	)
+
+	[[ -z "${KEYWORDS}" ]] && mycmakeargs+=( -DSYCL_COMPILER_VERSION="${PV//./}" )
 
 	if use doc; then
 		mycmakeargs+=( -DSPHINX_WARNINGS_AS_ERRORS=OFF )
