@@ -51,7 +51,7 @@ LICENSE="Apache-2.0 MIT"
 SLOT="0/9" # Based on libsycl.so
 
 
-IUSE="cuda hip test jit debug +zstd"
+IUSE="cuda hip test jit debug +zstd cpu"
 REQUIRED_USE="
 "
 RESTRICT="!test? ( test )"
@@ -91,6 +91,7 @@ src_configure() {
 		--no-assertions
 		--llvm-external-projects lld
 	)
+	use cpu && buildbot_flags+=( --native_cpu )
 	use doc && buildbot_flags+=( --docs )
 	use cuda && buildbot_flags+=( --cuda )
 	use hip && buildbot_flags+=( --hip )
