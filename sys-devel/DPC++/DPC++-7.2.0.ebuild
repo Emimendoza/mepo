@@ -18,6 +18,7 @@ DOCS_DEPEND="
 	')
 "
 inherit docs
+KEYWORDS="~amd64"
 
 # We cannot unbundle this because it has to be compiled with the clang/llvm
 # that we are building here. Otherwise we run into problems running the compiler.
@@ -27,9 +28,9 @@ VC_INTR_COMMIT="4fc83e12979096db72c129bd432238d5ca397e4d"
 # This one can be unbundled I think
 UMF_PV="1.1.0"
 NIGHTLY_VER="nightly-${PV//./-}"
-PV_YEAR=$(ver_cut 1)
-PV_MONTH=$(ver_cut 2)
-PV_DAY=$(ver_cut 3)
+RELEASE_VER="v${PV}"
+MY_VER="${NIGHTLY_VER}"
+[[ -z "${KEYWORDS}" ]] || MY_VER="${RELEASE_VER}"
 
 # From sycl/cmake/modules/FetchEmhash.cmake
 EMHASH_COMMIT="5e131ba09a5290823fe71099d9c35eb5df5345b6"
@@ -37,20 +38,20 @@ EMHASH_COMMIT="5e131ba09a5290823fe71099d9c35eb5df5345b6"
 DESCRIPTION="oneAPI Data Parallel C++ compiler"
 HOMEPAGE="https://github.com/intel/llvm"
 SRC_URI="
-	https://github.com/intel/llvm/archive/refs/tags/${NIGHTLY_VER}.tar.gz -> ${P}.tar.gz
+	https://github.com/intel/llvm/archive/refs/tags/${MY_VER}.tar.gz -> ${P}.tar.gz
 	https://github.com/intel/vc-intrinsics/archive/${VC_INTR_COMMIT}.tar.gz -> ${P}-vc-intrinsics-${VC_INTR_COMMIT}.tar.gz
 	https://github.com/ktprime/emhash/archive/${EMHASH_COMMIT}.tar.gz -> ${P}-emhash-${EMHASH_COMMIT}.tar.gz
 	https://github.com/oneapi-src/unified-memory-framework/archive/refs/tags/v${UMF_PV}.tar.gz -> ${P}-unified-memory-framework-${UMF_PV}.tar.gz
 "
-S="${WORKDIR}/llvm-${NIGHTLY_VER}"
+S="${WORKDIR}/llvm-${MY_VER#v}"
 CMAKE_USE_DIR="${S}/llvm"
 BUILD_DIR="${S}/build"
 
 LICENSE="Apache-2.0 MIT"
 SLOT="0/9" # Based on libsycl.so
-KEYWORDS="" # this is a nightly build and depends on not yet released latest spriv-headers
 
-IUSE="cuda hip test jit debug"
+
+IUSE="cuda hip test jit debug +zstd"
 REQUIRED_USE="
 "
 RESTRICT="!test? ( test )"
@@ -64,13 +65,14 @@ DEPEND="
 	dev-libs/intel-compute-runtime
 	dev-libs/opencl-icd-loader
 	>=dev-util/opencl-headers-2025.06.13
-	>dev-util/spirv-headers-1.4.350.1-r9999
+	>=dev-util/spirv-headers-1.4.357.0
 	dev-util/spirv-tools
 	media-libs/libva
 	dev-build/libtool
 	>=dev-cpp/parallel-hashmap-1.3.12
 	cuda? ( dev-util/nvidia-cuda-toolkit:= )
 	hip? ( dev-util/hip:= )
+	zstd? ( app-arch/zstd )
 "
 RDEPEND="${DEPEND}"
 
@@ -80,12 +82,14 @@ PATCHES=(
 
 
 src_configure() {
+	cp "${BROOT}/usr/share/gnuconfig/config.guess" llvm/cmake/ || die
 	filter-lto
 	local buildbot_flags=(
 		--print-cmake-flags
 		-s "${S}"
 		-o "${BUILD_DIR}"
 		--no-assertions
+		--llvm-external-projects lld
 	)
 	use doc && buildbot_flags+=( --docs )
 	use cuda && buildbot_flags+=( --cuda )
@@ -107,20 +111,25 @@ src_configure() {
 		-DFETCHCONTENT_SOURCE_DIR_VC-INTRINSICS="${WORKDIR}/vc-intrinsics-${VC_INTR_COMMIT}"
 		-DFETCHCONTENT_SOURCE_DIR_EMHASH="${WORKDIR}/emhash-${EMHASH_COMMIT}"
 		-DFETCHCONTENT_SOURCE_DIR_UNIFIED-MEMORY-FRAMEWORK="${WORKDIR}/unified-memory-framework-${UMF_PV}"
-		-DSYCL_COMPILER_VERSION="${PV//./}"
-		-DDPCPP_VERSION_MAJOR="${PV_YEAR}"
-		-DDPCPP_VERSION_MINOR="${PV_MONTH}"
-		-DDPCPP_VERSION_PATCH="${PV_DAY}"
 		-DUR_USE_EXTERNAL_UMF=OFF
 		-DCMAKE_INSTALL_PREFIX="${BUILD_DIR}/install"
 		-DCMAKE_INSTALL_MANDIR="${BUILD_DIR}/install/share/man"
 		-DCMAKE_INSTALL_INFODIR="${BUILD_DIR}/install/share/info"
 		-DCMAKE_INSTALL_DOCDIR="${BUILD_DIR}/install/share/doc/${PF}"
+		-DSYCL_COMPILER_VERSION="${PV//./}"
 		-DLLVM_USE_SPLIT_DWARF=OFF
+		-DCLANG_DEFAULT_LINKER=lld
 	)
 
 	if use doc; then
 		mycmakeargs+=( -DSPHINX_WARNINGS_AS_ERRORS=OFF )
+	fi
+
+	if use zstd; then
+		mycmakeargs+=(
+			-DLLVM_ENABLE_ZSTD=FORCE_ON
+			-DLLVM_USE_STATIC_ZSTD=OFF
+		)
 	fi
 
 	use debug || append-cppflags -DNDEBUG
