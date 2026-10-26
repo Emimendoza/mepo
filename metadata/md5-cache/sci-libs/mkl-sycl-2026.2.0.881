@@ -1,0 +1,15 @@
+BDEPEND=app-arch/xz-utils[extra-filters(+)]
+DEFINED_PHASES=install unpack
+DESCRIPTION=Intel Math Kernel Library Sycl
+EAPI=8
+HOMEPAGE=https://www.intel.com/content/www/us/en/developer/tools/oneapi/onemkl.html
+INHERIT=unpacker
+IUSE=eselect-ldso examples gnu-openmp llvm-openmp static-libs tbb
+KEYWORDS=~amd64
+LICENSE=ISSL
+RDEPEND=~sci-libs/mkl-2026.2.0.881[tbb=,gnu-openmp=,llvm-openmp=,eselect-ldso=,static-libs=]
+RESTRICT=strip
+SLOT=0/3
+SRC_URI=https://apt.repos.intel.com/oneapi/pool/main/intel-oneapi-mkl-sycl-stats-2026.2-2026.2.0-881_amd64.deb https://apt.repos.intel.com/oneapi/pool/main/intel-oneapi-mkl-sycl-vm-2026.2-2026.2.0-881_amd64.deb https://apt.repos.intel.com/oneapi/pool/main/intel-oneapi-mkl-sycl-data-fitting-2026.2-2026.2.0-881_amd64.deb https://apt.repos.intel.com/oneapi/pool/main/intel-oneapi-mkl-sycl-include-2026.2-2026.2.0-881_amd64.deb https://apt.repos.intel.com/oneapi/pool/main/intel-oneapi-mkl-sycl-devel-2026.2-2026.2.0-881_amd64.deb https://apt.repos.intel.com/oneapi/pool/main/intel-oneapi-mkl-sycl-blas-2026.2-2026.2.0-881_amd64.deb https://apt.repos.intel.com/oneapi/pool/main/intel-oneapi-mkl-sycl-rng-2026.2-2026.2.0-881_amd64.deb https://apt.repos.intel.com/oneapi/pool/main/intel-oneapi-mkl-sycl-lapack-2026.2-2026.2.0-881_amd64.deb
+_eclasses_=eapi9-pipestatus	d2c134036ac31c3085aebc9147f572bd	multiprocessing	45d0620f25c2f063ad6276ecd9ed9399	toolchain-funcs	58a918e3a42d0156f010dcfd43725be5	unpacker	a89c769f7dcf68bd2a6d23da9ede2ad2
+_md5_=16065f05ec05a4a37eea439dba3843df
