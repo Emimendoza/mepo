@@ -29,8 +29,16 @@ VC_INTR_COMMIT="4fc83e12979096db72c129bd432238d5ca397e4d"
 UMF_PV="1.1.0"
 NIGHTLY_VER="nightly-${PV//./-}"
 RELEASE_VER="v${PV}"
-MY_VER="${NIGHTLY_VER}"
-[[ -z "${KEYWORDS}" ]] || MY_VER="${RELEASE_VER}"
+
+if [[ -z "${KEYWORDS}" ]]; then
+	SYCL_COMPILER_VERSION="${PV//./}"
+	MY_VER="${NIGHTLY_VER}"
+else
+	# should be taken from timestamp of tag yyyymmdd
+	SYCL_COMPILER_VERSION="20261014"
+	MY_VER="${RELEASE_VER}"
+fi
+
 
 # From sycl/cmake/modules/FetchEmhash.cmake
 EMHASH_COMMIT="5e131ba09a5290823fe71099d9c35eb5df5345b6"
@@ -51,7 +59,7 @@ LICENSE="Apache-2.0 MIT"
 SLOT="0/9" # Based on libsycl.so
 
 
-IUSE="cuda hip test jit debug +zstd cpu"
+IUSE="cuda hip test jit debug +zstd cpu +default-lld"
 REQUIRED_USE="
 "
 RESTRICT="!test? ( test )"
@@ -70,7 +78,7 @@ DEPEND="
 	media-libs/libva
 	dev-build/libtool
 	>=dev-cpp/parallel-hashmap-1.3.12
-	cuda? ( dev-util/nvidia-cuda-toolkit:= )
+	cuda? ( dev-util/nvidia-cuda-toolkit:=[profiler] )
 	hip? ( dev-util/hip:= )
 	zstd? ( app-arch/zstd )
 "
@@ -118,13 +126,17 @@ src_configure() {
 		-DCMAKE_INSTALL_INFODIR="${BUILD_DIR}/install/share/info"
 		-DCMAKE_INSTALL_DOCDIR="${BUILD_DIR}/install/share/doc/${PF}"
 		-DLLVM_USE_SPLIT_DWARF=OFF
-		-DCLANG_DEFAULT_LINKER=lld
+		-DSYCL_COMPILER_VERSION="${SYCL_COMPILER_VERSION}"
 	)
 
-	[[ -z "${KEYWORDS}" ]] && mycmakeargs+=( -DSYCL_COMPILER_VERSION="${PV//./}" )
+	use default-lld && mycmakeargs+=( -DCLANG_DEFAULT_LINKER=lld )
+	use doc && mycmakeargs+=( -DSPHINX_WARNINGS_AS_ERRORS=OFF )
 
-	if use doc; then
-		mycmakeargs+=( -DSPHINX_WARNINGS_AS_ERRORS=OFF )
+	if use hip; then
+		mycmakeargs+=(
+			-DUR_HIP_ROCM_DIR="$(hipconfig -R)"
+			-DUR_HIP_LIB_DIR="$(hipconfig -R)/$(get_libdir)"
+		)
 	fi
 
 	if use zstd; then
@@ -145,10 +157,12 @@ src_compile() {
 	# Build sycl (this also installs some stuff already)
 	cmake_build deploy-sycl-toolchain
 
-	use doc && cmake_build doxygen-sycl
+	use doc && cmake_build docs/all
 
 	# Finish compiling
 	cmake_src_compile
+	# Despite the above, the install step still builds files
+	cmake_build install
 }
 
 src_test() {
@@ -156,8 +170,6 @@ src_test() {
 }
 
 src_install() {
-	# Finish installing in dummy dir before installing in actual image dir
-	cmake_build install
 	einstalldocs
 
 	local LLVM_INTEL_DIR="/usr/lib/llvm/intel"
